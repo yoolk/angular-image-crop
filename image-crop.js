@@ -762,10 +762,11 @@
     .directive('imageCrop', function() {
 
       return {
-        template: '<div id="image-crop-{{ rand }}" class="ng-image-crop ng-image-crop--{{ shape }}" ng-style="moduleStyles"><section ng-style="sectionStyles" ng-show="step==1"><input type="file" class="image-crop-input" /></section><section ng-style="sectionStyles" ng-show="step==2"><canvas class="cropping-canvas" width="{{ canvasWidth }}" height="{{ canvasHeight }}" ng-mousemove="onCanvasMouseMove($event)" ng-mousedown="onCanvasMouseDown($event)" ng-mouseup="onCanvasMouseUp($event)"></canvas><div ng-style="croppingGuideStyles" class="cropping-guide"></div><div class="zoom-handle" ng-mousemove="onHandleMouseMove($event)" ng-mousedown="onHandleMouseDown($event)" ng-mouseup="onHandleMouseUp($event)"><span>&larr; zoom &rarr;</span></div><button ng-click="crop()">Crop</button></section><section ng-style="sectionStyles" class="image-crop-section-final" ng-show="step==3"><img class="image-crop-final" ng-src="{{ croppedDataUri }}" /></section></div>',
+        template: '<div id="image-crop-{{ rand }}" class="ng-image-crop ng-image-crop--{{ shape }}" ng-style="moduleStyles"><section ng-style="sectionStyles" ng-show="step==1"><input type="file" class="image-crop-input" /></section><section ng-style="sectionStyles" ng-show="step==2"><canvas class="cropping-canvas" width="{{ canvasWidth }}" height="{{ canvasHeight }}" ng-mousemove="onCanvasMouseMove($event)" ng-mousedown="onCanvasMouseDown($event)" ng-mouseup="onCanvasMouseUp($event)"></canvas><div ng-style="croppingGuideStyles" class="cropping-guide"></div><div class="zoom-handle" ng-mousemove="onHandleMouseMove($event)" ng-mousedown="onHandleMouseDown($event)" ng-mouseup="onHandleMouseUp($event)"></div><button ng-click="crop()">Crop</button></section><section ng-style="sectionStyles" class="image-crop-section-final" ng-show="step==3"><img class="image-crop-final" ng-src="{{ croppedDataUri }}" /></section></div>',
         replace: true,
         restrict: 'AE',
         scope: {
+          imageSrc: '@',
           width: '@',
           height: '@',
           shape: '@',
@@ -774,13 +775,14 @@
         },
         link: function (scope, element, attributes) {
 
-          scope.rand = Math.round(Math.random() * 99999);
-          scope.step = scope.step || 1;
-          scope.shape = scope.shape || 'circle';
-          scope.width = parseInt(scope.width, 10) || 300;
-          scope.height = parseInt(scope.height, 10) || 300;
+          scope.rand    = Math.round(Math.random() * 99999);
+          scope.step    = scope.step || 1;
+          scope.shape   = scope.shape || 'circle';
+          scope.width   = parseInt(scope.width, 10) || 300;
+          scope.height  = parseInt(scope.height, 10) || 300;
 
-          scope.canvasWidth = scope.width + 100;
+          // changed
+          scope.canvasWidth = scope.width;
           scope.canvasHeight = scope.height + 100;
 
           var $elm = element[0];
@@ -792,6 +794,7 @@
           var $img = new Image();
           var fileReader = new FileReader();
 
+
           var maxLeft = 0, minLeft = 0, maxTop = 0, minTop = 0, imgLoaded = false, imgWidth = 0, imgHeight = 0;
           var currentX = 0, currentY = 0, dragging = false, startX = 0, startY = 0, zooming = false;
           var newWidth = imgWidth, newHeight = imgHeight;
@@ -799,21 +802,28 @@
           var zoom = 1;
           var maxZoomGestureLength = 0;
           var maxZoomedInLevel = 0, maxZoomedOutLevel = 2;
-          var minXPos = 0, maxXPos = 50, minYPos = 0, maxYPos = 50; // for dragging bounds
+          //  changed
+          var minXPos = 0, maxXPos = 0, minYPos = 0, maxYPos = 50; // for dragging bounds
 
           var zoomWeight = .4;
           var ctx = $canvas.getContext('2d');
           var exif = null;
           var files = [];
 
+          scope.$watch('imageSrc', function(value){
+            $img.src = value;
+          });
+
           // ---------- INLINE STYLES ----------- //
           scope.moduleStyles = {
-            width: (scope.width + 100) + 'px',
+            // changed
+            width: (scope.width) + 'px',
             height: (scope.height + 100) + 'px'
           };
 
           scope.sectionStyles = {
-            width: (scope.width + 100) + 'px',
+            // changed
+            width: (scope.width) + 'px',
             height: (scope.height + 100) + 'px'
           };
 
@@ -821,7 +831,7 @@
             width: scope.width + 'px',
             height: scope.height + 'px',
             top: '50px',
-            left: '50px'
+            left: '0'// changed
           };
 
           // ---------- EVENT HANDLERS ---------- //
@@ -851,60 +861,26 @@
 
 
           $img.onload = function() {
-            ctx.drawImage($img, 0, 0);
+            // changed scale img
+            $img.height = scope.width * $img.height / $img.width;
+            $img.width  = scope.width;
+            currentY    = (scope.height/2) - ($img.height/2) + 50
+            ctx.drawImage($img, 0, currentY, $img.width, $img.height);
 
-            imgWidth = $img.width;
-            imgHeight = $img.height;
-
+            imgWidth    = $img.width;
+            imgHeight   = $img.height;
             if (exif && exif.Orientation) {
 
               // change mobile orientation, if required
               switch(exif.Orientation){
-                case 1:
-                    // nothing
-                    break;
-                case 2:
-                    // horizontal flip
-                    ctx.translate(imgWidth, 0);
-                    ctx.scale(-1, 1);
-                    break;
-                case 3:
-                    // 180 rotate left
-                    ctx.translate(imgWidth, imgHeight);
-                    ctx.rotate(Math.PI);
-                    break;
-                case 4:
-                    // vertical flip
-                    ctx.translate(0, imgHeight);
-                    ctx.scale(1, -1);
-                    break;
-                case 5:
-                    // vertical flip + 90 rotate right
-                    ctx.rotate(0.5 * Math.PI);
-                    ctx.scale(1, -1);
-                    break;
-                case 6:
-                    // 90 rotate right
-                    ctx.rotate(0.5 * Math.PI);
-                    ctx.translate(0, -imgHeight);
-                    break;
-                case 7:
-                    // horizontal flip + 90 rotate right
-                    ctx.rotate(0.5 * Math.PI);
-                    ctx.translate(imgWidth, -imgHeight);
-                    ctx.scale(-1, 1);
-                    break;
-                case 8:
-                    // 90 rotate left
-                    ctx.rotate(-0.5 * Math.PI);
-                    ctx.translate(-imgWidth, 0);
-                    break;
+                // changed skip
                 default:
                     break;
               }
             }
 
-            minLeft = (scope.width + 100) - this.width;
+            // changed
+            minLeft = (scope.width) - this.width;
             minTop = (scope.height + 100) - this.height;
             newWidth = imgWidth;
             newHeight = imgHeight;
@@ -912,7 +888,8 @@
             // console.log('canvas width', $canvas.width);
             // console.log('image width', imgWidth);
 
-            maxZoomedInLevel = ($canvas.width - 100) / imgWidth;
+            // changed
+            maxZoomedInLevel = ($canvas.width) / imgWidth;
             // console.log('maxZoomedInLevel', maxZoomedInLevel);
 
             maxZoomGestureLength = to2Dp(Math.sqrt(Math.pow($canvas.width, 2) + Math.pow($canvas.height, 2)));
@@ -926,14 +903,27 @@
           // ---------- PRIVATE FUNCTIONS ---------- //
           function moveImage(x, y) {
 
-            if ((x < minXPos) || (x > maxXPos) || (y < minYPos) || (y > maxYPos)) {
-              // new position is out of bounds, would show gutter
-              return;
+            // changed flexible move for larger or smaller
+
+            if ($img.height > scope.height) {
+              if (y < minYPos){
+                y = minYPos;
+              }else if (y > maxYPos){
+                y = maxYPos;
+              }
+            }else if ($img.height <= scope.height){
+              if (y > minYPos){
+                y = minYPos;
+              }else if (y < maxYPos){
+                y = maxYPos;
+              }
             }
-            targetX = x;
+
+            x = targetX;
             targetY = y;
             ctx.clearRect(0, 0, $canvas.width, $canvas.height);
             ctx.drawImage($img, x, y, newWidth, newHeight);
+
           }
 
           function to2Dp(val) {
@@ -943,7 +933,8 @@
           function updateDragBounds() {
             // $img.width, $canvas.width, zoom
 
-            minXPos = $canvas.width - ($img.width * zoom) - 50;
+            // changed
+            minXPos = $canvas.width - ($img.width * zoom);
             minYPos = $canvas.height - ($img.height * zoom) - 50;
 
           }
@@ -1012,12 +1003,14 @@
 
           $finalImg.onload = function() {
             var tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.width - 100;
+            // changed
+            tempCanvas.width = this.width;
             tempCanvas.height = this.height - 100;
             tempCanvas.style.display = 'none';
 
             var tempCanvasContext = tempCanvas.getContext('2d');
-            tempCanvasContext.drawImage($finalImg, -50, -50);
+            // changed
+            tempCanvasContext.drawImage($finalImg, 0, -50);
 
             $elm.getElementsByClassName('image-crop-section-final')[0].appendChild(tempCanvas);
             scope.result = tempCanvas.toDataURL();
