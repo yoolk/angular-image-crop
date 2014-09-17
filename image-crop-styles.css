@@ -45,7 +45,7 @@
 }
 /* The overlayed draggable zoom handle in the corner of the module */
 .ng-image-crop .zoom-handle {
-  display: block;
+  display: none;
   position: absolute;
   bottom: 1px;
   left: 1px;
