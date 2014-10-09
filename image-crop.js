@@ -771,7 +771,10 @@
           height: '@',
           shape: '@',
           result: '=',
-          step: '='
+          step: '=', 
+          y: '=',
+          scaleW: '=',
+          scaleH: '='
         },
         link: function (scope, element, attributes) {
 
@@ -782,8 +785,9 @@
           scope.height  = parseInt(scope.height, 10) || 300;
 
           // changed
-          scope.canvasWidth = scope.width;
-          scope.canvasHeight = scope.height + 100;
+          scope.canvasWidth   = scope.width;
+          scope.canvasHeight  = scope.height + 100;
+          scope.imgDimensions = {};
 
           var $elm = element[0];
 
@@ -810,6 +814,7 @@
           var exif = null;
           var files = [];
 
+          // add changed
           scope.$watch('imageSrc', function(value){
             $img.src = value;
           });
@@ -864,6 +869,8 @@
             // changed scale img
             $img.height = scope.width * $img.height / $img.width;
             $img.width  = scope.width;
+            scope.scaleW = scope.width
+            scope.scaleH = $img.height
             currentY    = (scope.height/2) - ($img.height/2) + 50
             ctx.drawImage($img, 0, currentY, $img.width, $img.height);
 
@@ -880,11 +887,11 @@
             }
 
             // changed
-            minLeft = (scope.width) - this.width;
-            minTop = (scope.height + 100) - this.height;
-            newWidth = imgWidth;
-            newHeight = imgHeight;
-
+            minLeft       = (scope.width) - this.width;
+            minTop        = (scope.height + 100) - this.height;
+            newWidth      = imgWidth;
+            newHeight     = imgHeight;
+            scope.y       = -currentY;
             // console.log('canvas width', $canvas.width);
             // console.log('image width', imgWidth);
 
@@ -907,22 +914,17 @@
 
             if ($img.height > scope.height) {
               if (y < minYPos){
-                y = minYPos;
+                y           = minYPos;
               }else if (y > maxYPos){
-                y = maxYPos;
+                y           = maxYPos;
               }
-            }else if ($img.height <= scope.height){
-              if (y > minYPos){
-                y = minYPos;
-              }else if (y < maxYPos){
-                y = maxYPos;
-              }
+              targetY       = y;
+              x             = targetX;
+              scope.y       = -(y - 50);
+            
+              ctx.clearRect(0, 0, $canvas.width, $canvas.height);
+              ctx.drawImage($img, x, y, newWidth, newHeight);
             }
-
-            x = targetX;
-            targetY = y;
-            ctx.clearRect(0, 0, $canvas.width, $canvas.height);
-            ctx.drawImage($img, x, y, newWidth, newHeight);
 
           }
 
