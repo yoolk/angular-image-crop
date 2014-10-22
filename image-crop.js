@@ -869,9 +869,9 @@
             // changed scale img
             $img.height = scope.width * $img.height / $img.width;
             $img.width  = scope.width;
-            scope.scaleW = scope.width
-            scope.scaleH = $img.height
-            currentY    = (scope.height/2) - ($img.height/2) + 50
+            scope.scaleW = $img.width;
+            scope.scaleH = $img.height;
+            currentY    = (scope.height/2) - ($img.height/2) + 50;
             ctx.drawImage($img, 0, currentY, $img.width, $img.height);
 
             imgWidth    = $img.width;
