@@ -891,7 +891,7 @@
             minTop        = (scope.height + 100) - this.height;
             newWidth      = imgWidth;
             newHeight     = imgHeight;
-            scope.y       = -currentY;
+            scope.y       = 50-currentY;
             // console.log('canvas width', $canvas.width);
             // console.log('image width', imgWidth);
 
